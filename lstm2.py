@@ -1,3 +1,7 @@
+import torch
+import torch.nn as nn
+
+
 class VectorOutputLSTM(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_layers, output_dim, n_future, device):
         super(VectorOutputLSTM, self).__init__()
@@ -31,9 +35,10 @@ class VectorOutputLSTM(nn.Module):
         return out.view(x.size(0), -1)
 
 
-model = VectorOutputLSTM(12, 64, 1, 5, WINDOW_SIZE_Y + GAP_PREDICTION, "cuda").to("cuda")
-model.train()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-input = T.randn(25, 107, 12, device="cuda")
-out = model(input)
-print(out.shape)
+# def test():
+#     model = VectorOutputLSTM(12, 64, 1, 5, WINDOW_SIZE_Y + GAP_PREDICTION, "cuda").to("cuda")
+#     model.train()
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
+#     input = T.randn(25, 107, 12, device="cuda")
+#     out = model(input)
+#     print(out.shape)

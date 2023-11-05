@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.optim as optim
+import torch.nn as nn
 
 from lstm1 import TimeSeriesLSTM
 from lstm2 import VectorOutputLSTM
@@ -44,7 +45,7 @@ def load_data() -> pd.DataFrame:
     return df_merged
 
 
-def standardize_data() -> np.ndarray:
+def standardize_data(df_merged) -> np.ndarray:
     # standardize data
     np_df = df_merged.to_numpy()
     # get mean and std for consumption
@@ -61,7 +62,13 @@ def standardize_data() -> np.ndarray:
 
 
 # create a function to makes splits of the data
-def split_data(matrix, window_size_x, gap_prediction, window_size_y, start_index) -> np.ndarray:
+def split_data(
+    matrix,
+    window_size_x=WINDOW_SIZE_X,
+    gap_prediction=GAP_PREDICTION,
+    window_size_y=WINDOW_SIZE_Y,
+    start_index=1,
+) -> np.ndarray:
     # df: dataframe to split
     # window_size_x: size of the window
     # gap_prediction: how many time steps between last X value and the y value
@@ -82,15 +89,9 @@ def split_data(matrix, window_size_x, gap_prediction, window_size_y, start_index
     return np.array(Xs), np.array(ys)
 
 
-def split_data() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def create_train_test(np_df) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     # use function to create dataset
-    X, y = split_data(
-        np_df,
-        window_size_x=WINDOW_SIZE_X,
-        gap_prediction=GAP_PREDICTION,
-        start_index=1,
-        window_size_y=WINDOW_SIZE_Y,
-    )
+    X, y = split_data(np_df)
 
     # convert to train and test sets
     train_split = int(0.8 * len(X))
@@ -147,12 +148,16 @@ def evaluate_model_type1(model, test_X, test_y, criterion):
 
 
 def train_and_eval1(model_type: str):
+    df = load_data()
+    np_df = standardize_data(df)
+    X_train, y_train, X_test, y_test = create_train_test(np_df)
+
     # Instantiate the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if model_type == "lstm":
-        model = TimeSeriesLSTM().to(device)
+        model = TimeSeriesLSTM(GAP_PREDICTION, WINDOW_SIZE_Y).to(device)
     elif model_type == "transformer":
-        model = TimeSeriesTransformer().to(device)
+        model = TimeSeriesTransformer(GAP_PREDICTION, WINDOW_SIZE_Y).to(device)
     else:
         raise ValueError("Invalid model_type")
     criterion = nn.MSELoss()
@@ -168,7 +173,7 @@ def train_and_eval1(model_type: str):
     train_model_type1(model, train_X, train_y, criterion, optimizer, epochs=1000)
 
     # Evaluate the model
-    test_loss = evaluate_model1(model, test_X, test_y, criterion)
+    test_loss = evaluate_model_type1(model, test_X, test_y, criterion)
     print(f"Test Loss: {test_loss:.4f}")
 
     # Predict using the model
@@ -188,7 +193,7 @@ def train_and_eval1(model_type: str):
         plt.subplot(3, 4, i + 1)
         plt.plot(sample_true[:, i], label="True", marker="o")
         plt.plot(sample_pred[:, i], label="Predicted", marker="x")
-        plt.title(f"{df_merged.columns[i]}")
+        plt.title(f"{df.columns[i]}")
         plt.legend()
 
     plt.tight_layout()
@@ -232,6 +237,16 @@ def evaluate_model2(model, test_X, test_y, criterion):
 
 
 def train_and_eval2(model_type: str):
+    df = load_data()
+    np_df = standardize_data(df)
+    X_train, y_train, X_test, y_test = create_train_test(np_df)
+
+    # Convert them to tensors
+    train_X = torch.tensor(X_train, dtype=torch.float32).to(device)
+    train_y = torch.tensor(y_train, dtype=torch.float32).to(device)
+    test_X = torch.tensor(X_test, dtype=torch.float32).to(device)
+    test_y = torch.tensor(y_test, dtype=torch.float32).to(device)
+
     # Instantiate the model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if model_type == "lstm":
@@ -267,7 +282,7 @@ def train_and_eval2(model_type: str):
         plt.subplot(3, 4, i + 1)
         plt.plot(sample_true[:, i], label="True", marker="o")
         plt.plot(sample_pred[:, i], label="Predicted", marker="x")
-        plt.title(f"{df_merged.columns[i]}")
+        plt.title(f"{df.columns[i]}")
         plt.legend()
 
     plt.tight_layout()
@@ -277,56 +292,56 @@ def train_and_eval2(model_type: str):
 # --------------------------------------------
 
 
-def tsai_run():
-    from tsai.all import *
+# def tsai_run():
+#     # from tsai.all import *
 
-    bs = 64
-    c_in = 12  # aka channels, features, variables, dimensions
-    c_out = 5
-    seq_len = 107
+#     bs = 64
+#     c_in = 12  # aka channels, features, variables, dimensions
+#     c_out = 5
+#     seq_len = 107
 
-    xb = torch.randn(bs, c_in, seq_len)
+#     xb = torch.randn(bs, c_in, seq_len)
 
-    # standardize by channel by_var based on the training set
-    xb = (xb - xb.mean((0, 2), keepdim=True)) / xb.std((0, 2), keepdim=True)
+#     # standardize by channel by_var based on the training set
+#     xb = (xb - xb.mean((0, 2), keepdim=True)) / xb.std((0, 2), keepdim=True)
 
-    # Settings
-    max_seq_len = 256
-    d_model = 128
-    n_heads = 6
-    d_k = d_v = None  # if None --> d_model // n_heads
-    d_ff = 256
-    dropout = 0.1
-    n_layers = 3
-    fc_dropout = 0.1
-    kwargs = {}
+#     # Settings
+#     max_seq_len = 256
+#     d_model = 128
+#     n_heads = 6
+#     d_k = d_v = None  # if None --> d_model // n_heads
+#     d_ff = 256
+#     dropout = 0.1
+#     n_layers = 3
+#     fc_dropout = 0.1
+#     kwargs = {}
 
-    model = TST(
-        c_in,
-        c_out,
-        seq_len,
-        max_seq_len=max_seq_len,
-        d_model=d_model,
-        n_heads=n_heads,
-        d_k=d_k,
-        d_v=d_v,
-        d_ff=d_ff,
-        dropout=dropout,
-        n_layers=n_layers,
-        fc_dropout=fc_dropout,
-        **kwargs,
-    )
-    test_eq(model.to(xb.device)(xb).shape, [bs, c_out])
-    print(f"model parameters: {count_parameters(model)}")
+#     model = TST(
+#         c_in,
+#         c_out,
+#         seq_len,
+#         max_seq_len=max_seq_len,
+#         d_model=d_model,
+#         n_heads=n_heads,
+#         d_k=d_k,
+#         d_v=d_v,
+#         d_ff=d_ff,
+#         dropout=dropout,
+#         n_layers=n_layers,
+#         fc_dropout=fc_dropout,
+#         **kwargs,
+#     )
+#     test_eq(model.to(xb.device)(xb).shape, [bs, c_out])
+#     print(f"model parameters: {count_parameters(model)}")
 
-    print(model(T.rand((10, 12, 107))).shape)
+#     print(model(T.rand((10, 12, 107))).shape)
 
 
 def main():
     train_and_eval1("lstm")
-    train_and_eval2("lstm")
-    train_and_eval1("transformer")
-    train_and_eval2("transformer")
+    # train_and_eval2("lstm")
+    # train_and_eval1("transformer")
+    # train_and_eval2("transformer")
     # tsai_run()
 
 

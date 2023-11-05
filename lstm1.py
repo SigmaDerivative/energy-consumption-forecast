@@ -1,10 +1,14 @@
-import torch as T
 import torch.nn as nn
 
 
 class TimeSeriesLSTM(nn.Module):
-    def __init__(self, input_size=12, hidden_size=64, num_layers=1, output_size=12):
+    def __init__(
+        self, gap_prediction, window_size_y, input_size=12, hidden_size=64, num_layers=1, output_size=12
+    ):
         super(TimeSeriesLSTM, self).__init__()
+
+        self.gap_prediction = gap_prediction
+        self.window_size_y = window_size_y
 
         self.lstm = nn.LSTM(
             input_size=input_size, hidden_size=hidden_size, num_layers=num_layers, batch_first=True
@@ -22,7 +26,7 @@ class TimeSeriesLSTM(nn.Module):
             print("1:", out.shape)
 
         # Take the relevant steps from the LSTM output
-        out = out[:, GAP_PREDICTION : GAP_PREDICTION + WINDOW_SIZE_Y, :]
+        out = out[:, self.gap_prediction : self.gap_prediction + self.window_size_y, :]
 
         if verbose:
             print("2:", out.shape)
@@ -36,15 +40,16 @@ class TimeSeriesLSTM(nn.Module):
         return out
 
 
-model = TimeSeriesLSTM()
-total_params, trainable_params = count_parameters(model)
-print(f"Total parameters: {total_params}")
-print(f"Trainable parameters: {trainable_params}")
+# def test():
+#     model = TimeSeriesLSTM()
+#     total_params, trainable_params = count_parameters(model)
+#     print(f"Total parameters: {total_params}")
+#     print(f"Trainable parameters: {trainable_params}")
 
-import torch.optim as optim
+#     import torch.optim as optim
 
-model = TimeSeriesLSTM().to("cuda")
-model.train()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-input = T.randn(25, 107, 12, device="cuda")
-out = model(input, verbose=True)
+#     model = TimeSeriesLSTM().to("cuda")
+#     model.train()
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
+#     input = T.randn(25, 107, 12, device="cuda")
+#     out = model(input, verbose=True)

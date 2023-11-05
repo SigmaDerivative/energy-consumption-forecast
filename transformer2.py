@@ -1,3 +1,6 @@
+import torch.nn as nn
+
+
 class TransformerForecasting(nn.Module):
     def __init__(self, input_dim, d_model, nhead, num_encoder_layers, output_dim, n_future):
         super(TransformerForecasting, self).__init__()
@@ -21,9 +24,10 @@ class TransformerForecasting(nn.Module):
         return x.view(x.size(0), -1)
 
 
-model = TransformerForecasting(12, 64, 2, 3, 5, WINDOW_SIZE_Y + GAP_PREDICTION).to("cuda")
-model.train()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-input = T.randn(25, 107, 12, device="cuda")
-out = model(input)
-print(out.shape)
+# def test():
+#     model = TransformerForecasting(12, 64, 2, 3, 5, WINDOW_SIZE_Y + GAP_PREDICTION).to("cuda")
+#     model.train()
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
+#     input = T.randn(25, 107, 12, device="cuda")
+#     out = model(input)
+#     print(out.shape)

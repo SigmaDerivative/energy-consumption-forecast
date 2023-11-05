@@ -1,8 +1,23 @@
+import torch
+import torch.nn as nn
+
+
 class TimeSeriesTransformer(nn.Module):
     def __init__(
-        self, feature_size=12, num_layers=1, num_heads=6, feedforward_dim=64, dropout=0.1, output_size=12
+        self,
+        gap_prediction,
+        window_size_y,
+        feature_size=12,
+        num_layers=1,
+        num_heads=6,
+        feedforward_dim=64,
+        dropout=0.1,
+        output_size=12,
     ):
         super(TimeSeriesTransformer, self).__init__()
+
+        self.gap_prediction = gap_prediction
+        self.window_size_y = window_size_y
 
         self.feature_size = feature_size
 
@@ -40,7 +55,7 @@ class TimeSeriesTransformer(nn.Module):
             print("3:", out.shape)
 
         # Use relevant steps from the transformer output
-        out = out[:, GAP_PREDICTION : GAP_PREDICTION + WINDOW_SIZE_Y, :]
+        out = out[:, self.gap_prediction : self.gap_prediction + self.window_size_y, :]
 
         if verbose:
             print("4:", out.shape)
@@ -54,13 +69,14 @@ class TimeSeriesTransformer(nn.Module):
         return out
 
 
-model = TimeSeriesTransformer()
-total_params, trainable_params = count_parameters(model)
-print(f"Total parameters: {total_params}")
-print(f"Trainable parameters: {trainable_params}")
+# def test():
+#     model = TimeSeriesTransformer()
+#     total_params, trainable_params = count_parameters(model)
+#     print(f"Total parameters: {total_params}")
+#     print(f"Trainable parameters: {trainable_params}")
 
-model = TimeSeriesTransformer()
-model.train()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-input = T.randn(25, 107, 12)
-out = model(input, verbose=True)
+#     model = TimeSeriesTransformer()
+#     model.train()
+#     optimizer = optim.Adam(model.parameters(), lr=0.001)
+#     input = T.randn(25, 107, 12)
+#     out = model(input, verbose=True)
